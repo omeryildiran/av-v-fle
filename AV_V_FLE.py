@@ -12,7 +12,7 @@ Short outline of the experiment:
 Experiment 1:
 
 1- Blank screen with fixation cross(wait for space to start)
-2- After a constant short delay(200ms) initiate moving bar
+2- After a constant short delay(200ms) initiate moving bars
 3- Flash AudioVisual bar on upper part of screen but at exactly on same horizontal position as moving bar for 1 frame
 4-turn the fixation cross color to red to indicate response phase. Which is right or left indicated flash was leading or laggin
 5-repeat the trial N times and vary the horizontal position and timing of AudioVisual stimuli
