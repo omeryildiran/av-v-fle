@@ -64,7 +64,7 @@ expInfo = {
 
 #setup screen properties
 monitor_options = {
-    "asusZenbook14": { "sizeIs": 1024,    "screen_width": 15,   "screen_height": 15,    "screen_distance": 60    },
+    "asusZenbook14": { "sizeIs": 800,    "screen_width": 15,   "screen_height": 15,    "screen_distance": 60    },
     "labMon": {  "sizeIs": 1024,        "screen_width": 28,        "screen_height": 28,        "screen_distance": 60    }}
 monitorSpecs=monitor_options["asusZenbook14"]
 sizeIs=monitorSpecs["sizeIs"] # 1024
@@ -72,7 +72,7 @@ screen_width=monitorSpecs["screen_width"] #31 asuSs 14 # actual size of my scree
 screen_height=monitorSpecs["screen_height"] #28 # 16.5 asus
 screen_distance=monitorSpecs["screen_distance"] #60 # 57 asus
 # define monitor
-myMon=monitors.Monitor('asusMon', width=31, distance=57)
+myMon=monitors.Monitor('asusMon', width=screen_width, distance=57)
 myMon.setSizePix((sizeIs, sizeIs))
 selectedMon=myMon
 win = visual.Window(size=(sizeIs,sizeIs),
@@ -94,18 +94,21 @@ print(win.size)
 def dva2height(dva):
     return dva_to_px(dva, h=screen_height, d=screen_distance, r=sizeIs)/win.size[1]
 
-
+refreshRate=win.getActualFrameRate()
+print(refreshRate)
 
 # Initialize components for Routine "trial"
 trialClock = core.Clock()
 
 barColor="black"
-barWidth=dva_to_px(size_in_deg=0.15,h=screen_height,d=screen_distance,r=sizeIs)
-barHeight=dva_to_px(size_in_deg=0.65,h=screen_height,d=screen_distance,r=sizeIs)
+barWidth=dva_to_px(size_in_deg=0.2,h=screen_height,d=screen_distance,r=sizeIs)
+barHeight=dva_to_px(size_in_deg=0.7,h=screen_height,d=screen_distance,r=sizeIs)
 #barWidth=100
+movingBarYPos=-dva_to_px(1,screen_height,screen_distance,sizeIs)
+movingBarXPos0=-win.size[0]/2+dva_to_px(1,h=screen_height,d=screen_distance,r=sizeIs)
 moving_bar = visual.Rect(win=win, name='moving_bar',
     width=barWidth, height=barHeight,
-    ori=0, pos=(-win.size[1]/2+dva_to_px(1,h=screen_height,d=screen_distance,r=sizeIs), -dva_to_px(1,screen_height,screen_distance,sizeIs)),
+    ori=0, pos=(movingBarXPos0, movingBarYPos),
     lineWidth=0, lineColor=barColor, lineColorSpace='rgb',
     fillColor=barColor, fillColorSpace='rgb',
     opacity=1, depth=-1.0, interpolate=True,units='pix')
@@ -153,7 +156,6 @@ routineTimer = core.Clock()  # to track time remaining of each (possibly non-slâ
 all_responses=[]
 responseTimes=[]
 #region [rgba(206, 10, 118, 0.14)]
-
 # Start Routine "trial"
 while trialN<maxTrials and not endExpNow:
     tStart = globalClock.getTime()
@@ -198,29 +200,40 @@ while trialN<maxTrials and not endExpNow:
         thisComponent.tStopRefresh = None
         if hasattr(thisComponent, 'status'):
             thisComponent.status = NOT_STARTED
+
+    # Add a short delay before starting the trial
+    core.wait(0.1)
+    
     t = 0
-    flashPos= -win.size[0]/4+dva_to_px(random.uniform(0, 1),h=screen_height,d=screen_distance,r=sizeIs)
-    flashPos=random.uniform(-win.size[0]/4,win.size[0]/4)
+    moving_bar.pos = [movingBarXPos0,movingBarYPos ]
+    # Define the speed of the bar in pixels per second
+    speed = dva_to_px(0.10)  # Adjust this value as needed
+    print(speed)
+    clock = core.Clock()
+    # Track the last frame time
+    last_frame_time = clock.getTime()
+    #flashPos= -win.size[0]/4+dva_to_px(random.uniform(0, 1),h=screen_height,d=screen_distance,r=sizeIs)
+    flashPos=random.uniform(-win.size[0]/4,win.size[1]/4)
     """Run Trial Routine"""
     #region [rgba(10, 183, 206, 0.14)]
     while continueRoutine:
+        fixation.color='white'
         t = trialClock.getTime()
         tThisFlip = win.getFutureFlipTime(clock=routineTimer)
         tThisFlipGlobal = win.getFutureFlipTime(clock=None)
         frameN = frameN + 1
+        
+        current_time = clock.getTime()
+        delta_time=current_time-last_frame_time
+        last_frame_time = current_time
+        
+        print(delta_time)
 
-
-        if fixation.status == NOT_STARTED and t >= 0.0-frameTolerance:
-            fixation.frameNStart = frameN
-            fixation.tStart = t
-            fixation.tStartRefresh = tThisFlipGlobal
-            win.timeOnFlip(fixation, 'tStartRefresh')
-            fixation.setAutoDraw(True)
-
+        # initiate fixation cross at the center of the screen
+        fixation.setAutoDraw(True)
 
         # initiate moving bar at the left edge of the screen
         if moving_bar.status == NOT_STARTED and t >= 0.0-frameTolerance:
-            #moving_bar.pos = [-field_size[0]/2, 0]
             moving_bar.frameNStart = frameN # exact frame index
             moving_bar.tStart = t # local t and not account for scr refresh
             moving_bar.tStartRefresh = tThisFlipGlobal  # on global time
@@ -228,9 +241,10 @@ while trialN<maxTrials and not endExpNow:
             moving_bar.setAutoDraw(True)
 
         if moving_bar.status == STARTED and moving_bar.pos[0] < field_size[0]/2:
-            moving_bar.pos = [moving_bar.pos[0]+dva_to_px(0.15), moving_bar.pos[1]]
-            moving_bar.draw()
-            win.flip()
+            # moving bar moves to the right edge of the screen
+            new_pos_x = moving_bar.pos[0] + speed * delta_time*60
+            moving_bar.pos = [new_pos_x, moving_bar.pos[1]]
+            #moving_bar.draw()
         elif moving_bar.status == STARTED and moving_bar.pos[0] >= field_size[0]/2:
             moving_bar.setAutoDraw(False)
             continueRoutine=False
@@ -244,8 +258,7 @@ while trialN<maxTrials and not endExpNow:
             burst.play(when=win)  # sync with win flip
             burst.status = STARTED
 
-        # if burst.status == STARTED and frameN >= (burst.frameNStart + 1):
-        #     burst.stop()
+
 
         if flash.status == NOT_STARTED and moving_bar.pos[0] >= flashPos and t >= 0.0-frameTolerance:
             flash.pos = [flashPos, dva_to_px(1,h=screen_height,d=screen_distance,r=sizeIs)]
@@ -258,6 +271,8 @@ while trialN<maxTrials and not endExpNow:
         if flash.status == STARTED and frameN >= (flash.frameNStart + 1):
             flash.setAutoDraw(False)
 
+
+        # Flip the screen to show the moving bar after all the components are drawn
         if continueRoutine:  # don't flip if this routine is over or we'll get a blank screen
             win.flip()
         # check for quit (typically the Esc key)
@@ -273,14 +288,15 @@ while trialN<maxTrials and not endExpNow:
     win.flip()
 
     #endregion
-    
+    # wait for 0.2 second before starting the response phase
+    core.wait(0.2)
+
     #region [rgba(88, 206, 10, 0.14)]
     # prepare to start Routine Response
     fixation.color='red'
     fixation.draw()
     win.flip()
-    continueRoutine = True
-
+    
     responseClock = core.Clock()
     responseComponents = [fixation, responseKeys, giveResponseText]
     for thisComponent in responseComponents:
@@ -290,10 +306,10 @@ while trialN<maxTrials and not endExpNow:
         thisComponent.tStopRefresh = None
         if hasattr(thisComponent, 'status'):
             thisComponent.status = NOT_STARTED
-    t = 0
-    frameN = -1
 
     """Run Response Routine"""
+    # Clear the event buffer before entering the waitResponse phase
+    event.clearEvents(eventType='keyboard')
     # -- run the response routine
     waitResponse = True
     timerResponse=core.Clock()
@@ -304,12 +320,12 @@ while trialN<maxTrials and not endExpNow:
         tThisFlipGlobal = win.getFutureFlipTime(clock=None)
         fixation.setAutoDraw(True)
         giveResponseText.setAutoDraw(True)
+        giveResponseText.pos = [0, -dva_to_px(1,h=screen_height,d=screen_distance,r=sizeIs)]
         theseKeys = responseKeys.getKeys(keyList=['left', 'right'], waitRelease=True)
         t = timerResponse.getTime()
 
         if len(theseKeys):
             waitResponse = False
-            # record
             #all_responses.append(theseKeys[-1].name)
             if theseKeys[-1].name == 'left':
                 all_responses.append(0)
@@ -318,7 +334,7 @@ while trialN<maxTrials and not endExpNow:
             # record time of response since the start of the response phase
             tRespEnd=timerResponse.getTime()
             responseTimes.append(tRespEnd-tResponseStart)
-            
+        
         # check for quit (typically the Esc key)
         if endExpNow or defaultKeyboard.getKeys(keyList=["escape"]):
             core.quit()
@@ -330,7 +346,6 @@ while trialN<maxTrials and not endExpNow:
     for thisComponent in responseComponents:
         if hasattr(thisComponent, "setAutoDraw"):
             thisComponent.setAutoDraw(False)
-    fixation.color='white'
     # endregion
 
 
