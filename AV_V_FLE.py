@@ -32,13 +32,15 @@ from psychopy.constants import (NOT_STARTED, STARTED, PLAYING, PAUSED,
 import sys  # to get file system encoding
 from psychopy import prefs
 from audio_cue import create_stereo_sound, positional_audio
-prefs.hardware['audioLib'] = ['pygame']
 import psychopy.iohub as io
 from psychopy.iohub.util import hideWindow, showWindow
 from psychopy.tools.monitorunittools import deg2pix, pix2deg
 from psychopy import monitors
 from psychopy.hardware import keyboard
 import random
+
+# Set the audio library to pyo
+prefs.hardware['audioLib'] = ['pygame']
 
 """          Experiment INFO Setup"""
 # Store info about the experiment session
@@ -49,7 +51,8 @@ expInfo = {
     'session': '001',
 }
 
-# Experiment Dialog Box
+
+""" Dialog Box for Experiment Info"""
 # dlg = gui.DlgFromDict(dictionary=expInfo, sortKeys=False, title=expName)
 # if dlg.OK == False:
 #     core.quit()  # user pressed cancel
@@ -104,8 +107,11 @@ barColor="black"
 barWidth=dva_to_px(size_in_deg=0.2,h=screen_height,d=screen_distance,r=sizeIs)
 barHeight=dva_to_px(size_in_deg=0.7,h=screen_height,d=screen_distance,r=sizeIs)
 #barWidth=100
+
+horizontalOffset=dva_to_px(1,h=screen_height,d=screen_distance,r=sizeIs)
 movingBarYPos=-dva_to_px(1,screen_height,screen_distance,sizeIs)
-movingBarXPos0=-win.size[0]/2+dva_to_px(1,h=screen_height,d=screen_distance,r=sizeIs)
+
+movingBarXPos0=-win.size[0]/2+horizontalOffset
 moving_bar = visual.Rect(win=win, name='moving_bar',
     width=barWidth, height=barHeight,
     ori=0, pos=(movingBarXPos0, movingBarYPos),
@@ -129,7 +135,6 @@ ResponseClock = core.Clock()
 fixationSize=dva_to_px(size_in_deg=0.1,h=screen_height,d=screen_distance,r=sizeIs)
 #print("fixation size is ",fixationSize)
 fixation =   visual.Circle(win, radius=fixationSize, fillColor='white',colorSpace='rgb', units='pix',pos=(0, 0))
-responseKeys = keyboard.Keyboard()
 giveResponseText = visual.TextStim(win=win, text='Press left for flash "Lagging" or right for "Leading" responses', color=[1, 1, 1], units='pix', height=20)
 
 # create a default keyboard (e.g. to check for escape)
@@ -153,6 +158,7 @@ frameTolerance = 0.001  # how close to onset before 'same' frame
 globalClock = core.Clock()  # to track the time since experiment started
 routineTimer = core.Clock()  # to track time remaining of each (possibly non-sl€ip) routine 
 
+responseKeys = keyboard.Keyboard(backend='iohub')
 all_responses=[]
 responseTimes=[]
 #region [rgba(206, 10, 118, 0.14)]
@@ -190,8 +196,7 @@ while trialN<maxTrials and not endExpNow:
         win.flip()
 
 
-    # Frames of trial starts here
-     # keep track of which components have finished
+    # keep track of which components have finished
     trialComponents = [fixation, moving_bar, burst, flash]
     for thisComponent in trialComponents:
         thisComponent.tStart = None
@@ -227,8 +232,6 @@ while trialN<maxTrials and not endExpNow:
         delta_time=current_time-last_frame_time
         last_frame_time = current_time
         
-        print(delta_time)
-
         # initiate fixation cross at the center of the screen
         fixation.setAutoDraw(True)
 
@@ -240,23 +243,12 @@ while trialN<maxTrials and not endExpNow:
             win.timeOnFlip(moving_bar, 'tStartRefresh')  # time at next scr refresh
             moving_bar.setAutoDraw(True)
 
-        if moving_bar.status == STARTED and moving_bar.pos[0] < field_size[0]/2:
+        if moving_bar.status == STARTED and moving_bar.pos[0] < field_size[0]/2-horizontalOffset:
             # moving bar moves to the right edge of the screen
             new_pos_x = moving_bar.pos[0] + speed * delta_time*60
             moving_bar.pos = [new_pos_x, moving_bar.pos[1]]
-            #moving_bar.draw()
-        elif moving_bar.status == STARTED and moving_bar.pos[0] >= field_size[0]/2:
-            moving_bar.setAutoDraw(False)
+        elif moving_bar.status == STARTED and moving_bar.pos[0] >= field_size[0]/2-horizontalOffset:
             continueRoutine=False
-
-        # initiate audio cue and flash when moving bar is at the center of the screen
-        if burst.status == NOT_STARTED and moving_bar.pos[0] > flashPos and t >= 0.0-frameTolerance:
-            burst.frameNStart = frameN
-            burst.tStart = t
-            burst.tStartRefresh = tThisFlipGlobal
-            win.timeOnFlip(burst, 'tStartRefresh')
-            burst.play(when=win)  # sync with win flip
-            burst.status = STARTED
 
 
 
@@ -270,6 +262,18 @@ while trialN<maxTrials and not endExpNow:
 
         if flash.status == STARTED and frameN >= (flash.frameNStart + 1):
             flash.setAutoDraw(False)
+
+                # initiate audio cue and flash when moving bar is at the center of the screen
+        if burst.status == NOT_STARTED and flash.status==STARTED:
+            if t >= flash.tStart - frameTolerance:
+                burst.frameNStart = frameN
+                burst.tStart = t
+                burst.tStartRefresh = tThisFlipGlobal
+                win.timeOnFlip(burst, 'tStartRefresh')
+                burst.play(when=win)  # sync with win flip
+                burst.status = STARTED
+
+
 
 
         # Flip the screen to show the moving bar after all the components are drawn
@@ -296,7 +300,9 @@ while trialN<maxTrials and not endExpNow:
     fixation.color='red'
     fixation.draw()
     win.flip()
-    
+    # set response keys to null before starting the response phase
+    responseKeys.clearEvents()
+
     responseClock = core.Clock()
     responseComponents = [fixation, responseKeys, giveResponseText]
     for thisComponent in responseComponents:
@@ -310,21 +316,25 @@ while trialN<maxTrials and not endExpNow:
     """Run Response Routine"""
     # Clear the event buffer before entering the waitResponse phase
     event.clearEvents(eventType='keyboard')
+    responseKeys.keys = []
+    responseKeys.rt = []
+
     # -- run the response routine
     waitResponse = True
     timerResponse=core.Clock()
     t = timerResponse.getTime()
     tResponseStart=t
+
     while waitResponse:
         tThisFlip = win.getFutureFlipTime(clock=timerResponse)
         tThisFlipGlobal = win.getFutureFlipTime(clock=None)
         fixation.setAutoDraw(True)
         giveResponseText.setAutoDraw(True)
         giveResponseText.pos = [0, -dva_to_px(1,h=screen_height,d=screen_distance,r=sizeIs)]
-        theseKeys = responseKeys.getKeys(keyList=['left', 'right'], waitRelease=True)
+        response = responseKeys.getKeys(keyList=['left', 'right'], waitRelease=True)
         t = timerResponse.getTime()
 
-        if len(theseKeys):
+        if len(response)>0:
             waitResponse = False
             #all_responses.append(theseKeys[-1].name)
             if theseKeys[-1].name == 'left':
@@ -334,7 +344,8 @@ while trialN<maxTrials and not endExpNow:
             # record time of response since the start of the response phase
             tRespEnd=timerResponse.getTime()
             responseTimes.append(tRespEnd-tResponseStart)
-        
+        else:
+            waitResponse = True
         # check for quit (typically the Esc key)
         if endExpNow or defaultKeyboard.getKeys(keyList=["escape"]):
             core.quit()
