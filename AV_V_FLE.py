@@ -38,6 +38,13 @@ from psychopy.tools.monitorunittools import deg2pix, pix2deg
 from psychopy import monitors
 from psychopy.hardware import keyboard
 import random
+from create_conditions_time_delay import TimingGenerator
+
+timing_generator = TimingGenerator()
+audioDelays, visualDelays = timing_generator.generate_audio_visual_delays()
+onsetFlashTimes = timing_generator.generate_onset_flash_times()
+
+
 
 # Set the audio library to pyo
 prefs.hardware['audioLib'] = ['pygame']
@@ -86,19 +93,19 @@ win.monitor.setWidth(screen_width)
 win.monitor.setDistance(screen_distance)
 
 frameRate=win.getActualFrameRate()
-print(frameRate)
+#print(frameRate)
 expInfo['frameRate']=frameRate
 if expInfo['frameRate'] != None:
     frameDur = 1.0 / round(expInfo['frameRate'])
 else:
     frameDur = 1.0 / 60.0  # could not measure, so guess
 
-print(win.size)
+#print(win.size)
 def dva2height(dva):
     return dva_to_px(dva, h=screen_height, d=screen_distance, r=sizeIs)/win.size[1]
 
 refreshRate=win.getActualFrameRate()
-print(refreshRate)
+#print(refreshRate)
 
 # Initialize components for Routine "trial"
 trialClock = core.Clock()
