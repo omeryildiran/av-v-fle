@@ -39,15 +39,18 @@ from psychopy import monitors
 from psychopy.hardware import keyboard
 import random
 from create_conditions_time_delay import TimingGenerator
+import scipy.io as sio
+import pandas as pd
+
 
 timing_generator = TimingGenerator()
 audioDelays, visualDelays = timing_generator.generate_audio_visual_delays()
-onsetFlashTimes = timing_generator.generate_onset_flash_times()
-
+incidentPoints = timing_generator.generate_incident_times()
+initialBarSide = timing_generator.initial_bar_side()
 
 
 # Set the audio library to pyo
-prefs.hardware['audioLib'] = ['pygame']
+prefs.hardware['audioLib'] = ['sounddevice']
 
 """          Experiment INFO Setup"""
 # Store info about the experiment session
@@ -63,14 +66,14 @@ expInfo = {
 # dlg = gui.DlgFromDict(dictionary=expInfo, sortKeys=False, title=expName)
 # if dlg.OK == False:
 #     core.quit()  # user pressed cancel
-# expInfo['date'] = data.getDateStr()  # add a simple timestamp
+expInfo['date'] = data.getDateStr()  # add a simple timestamp
 # expInfo['expName'] = expName
 # expInfo['psychopyVersion'] = psychopyVersion
 # Ensure that relative paths start from the same directory as this script
-#_thisDir = os.path.dirname(os.path.abspath(__file__))
-#os.chdir(_thisDir)
+_thisDir = os.path.dirname(os.path.abspath(__file__))
+os.chdir(_thisDir)
 # Data file name stem = absolute path + name; later add .psyexp, .csv, .log, etc
-#filename = _thisDir + os.sep + u'data/%s_%s_%s' % (expInfo['participant'], expName, expInfo['date'],)
+filename = _thisDir + os.sep + u'data\%s_%s_%s' % (expInfo['participant'], expName, expInfo['date'],)
 
 #setup screen properties
 monitor_options = {
@@ -86,15 +89,16 @@ myMon=monitors.Monitor('asusMon', width=screen_width, distance=57)
 myMon.setSizePix((sizeIs, sizeIs))
 selectedMon=myMon
 win = visual.Window(size=(sizeIs,sizeIs),
-                    fullscr=False,  monitor=myMon, units='pix',  color=[0, 0, 0], useFBO=True, screen=1, colorSpace='rgb')
+                    fullscr=True,  monitor=myMon, units='pix',  color=[0, 0, 0], useFBO=True, screen=1, colorSpace='rgb')
+exp = data.ExperimentHandler(name="av_v_fle",version='0.1.0')
+
 
 field_size=[sizeIs,sizeIs]
 win.monitor.setWidth(screen_width)
 win.monitor.setDistance(screen_distance)
 
-frameRate=win.getActualFrameRate()
-#print(frameRate)
-expInfo['frameRate']=frameRate
+refreshRate=win.getActualFrameRate()
+expInfo['frameRate']=refreshRate
 if expInfo['frameRate'] != None:
     frameDur = 1.0 / round(expInfo['frameRate'])
 else:
@@ -104,8 +108,10 @@ else:
 def dva2height(dva):
     return dva_to_px(dva, h=screen_height, d=screen_distance, r=sizeIs)/win.size[1]
 
-refreshRate=win.getActualFrameRate()
-#print(refreshRate)
+print("refresh rate is", refreshRate)
+frameDur=1/refreshRate
+print("frame dur is", frameDur)
+
 
 # Initialize components for Routine "trial"
 trialClock = core.Clock()
@@ -118,10 +124,9 @@ barHeight=dva_to_px(size_in_deg=0.7,h=screen_height,d=screen_distance,r=sizeIs)
 horizontalOffset=dva_to_px(1,h=screen_height,d=screen_distance,r=sizeIs)
 movingBarYPos=-dva_to_px(1,screen_height,screen_distance,sizeIs)
 
-movingBarXPos0=-win.size[0]/2+horizontalOffset
 moving_bar = visual.Rect(win=win, name='moving_bar',
     width=barWidth, height=barHeight,
-    ori=0, pos=(movingBarXPos0, movingBarYPos),
+    ori=0, pos=(-win.size[0]/2, movingBarYPos),
     lineWidth=0, lineColor=barColor, lineColorSpace='rgb',
     fillColor=barColor, fillColorSpace='rgb',
     opacity=1, depth=-1.0, interpolate=True,units='pix')
@@ -152,7 +157,7 @@ continueRoutine = True
 frameN = -1
 win.setMouseVisible(False)    
 trialN=0
-maxTrials=10
+maxTrials=3
 haveRest=False
 haveRestText=visual.TextStim(win, text='Press space to continue', color=[1, 1, 1], units='pix', height=20)
 haveRestNum=1
@@ -163,19 +168,33 @@ frameTolerance = 0.001  # how close to onset before 'same' frame
 
 # Create some handy timers
 globalClock = core.Clock()  # to track the time since experiment started
-routineTimer = core.Clock()  # to track time remaining of each (possibly non-sl€ip) routine 
+phaseTimer = core.Clock()  # to track time remaining of each (possibly non-sl€ip) routine 
 
 responseKeys = keyboard.Keyboard(backend='iohub')
 all_responses=[]
 responseTimes=[]
+totalDistance=win.size[0]-horizontalOffset*2
+
+## Save the data
+incident_imes=[]
+audio_delays=[]
+visual_delays=[]
+trial_durs=[]
+audioTime=[]
+flashTime=[]
+incidentTimes=[]
+trialNum=[]
 #region [rgba(206, 10, 118, 0.14)]
 # Start Routine "trial"
 while trialN<maxTrials and not endExpNow:
+    trialNum.append(trialN+1)
     tStart = globalClock.getTime()
     _space2pass_allKeys = []
     space2pass.keys = []
     space2pass.clearEvents(eventType='keyboard')
-    
+    print(incidentPoints[trialN])
+    incidentTime=incidentPoints[trialN]/1000 # ms to s
+    incidentFrame=int(incidentTime*refreshRate)
     # have a rest screen
     haveRest=True
     while haveRest:
@@ -188,8 +207,6 @@ while trialN<maxTrials and not endExpNow:
 
     # Update the trial number
     trialN+=1
-
-    
     win.flip(clearBuffer=True)
     continueRoutine = True
     _timeToFirstFrame = win.getFutureFlipTime(clock="now")
@@ -201,7 +218,6 @@ while trialN<maxTrials and not endExpNow:
         waiterTime = globalClock.getTime() - tStart
         fixation.draw()
         win.flip()
-
 
     # keep track of which components have finished
     trialComponents = [fixation, moving_bar, burst, flash]
@@ -215,92 +231,100 @@ while trialN<maxTrials and not endExpNow:
 
     # Add a short delay before starting the trial
     core.wait(0.1)
-    
-    t = 0
-    moving_bar.pos = [movingBarXPos0,movingBarYPos ]
+
+    # Set the initial position of the moving bar dependent on the trial
+    sideBar=initialBarSide[trialN]# 1 for right, -1 for left
+    movingBarXPos0=sideBar*(win.size[0]/2-horizontalOffset)# if sideBar is -1, moving bar starts from the left edge of the screen vice-versa
+    moving_bar.pos = [movingBarXPos0,movingBarYPos]
+    flash.pos[0] = movingBarXPos0
+    flash.pos[1]=dva_to_px(1,h=screen_height,d=screen_distance,r=sizeIs)
+
     # Define the speed of the bar in pixels per second
-    speed = dva_to_px(0.10)  # Adjust this value as needed
-    print(speed)
+    speed = -1*sideBar*dva_to_px(0.16)  # Adjust this value as needed
+    totalDur=abs(totalDistance/(speed*60))
+    print("total dur",totalDur)
+    #print(speed)
     clock = core.Clock()
     # Track the last frame time
     last_frame_time = clock.getTime()
-    #flashPos= -win.size[0]/4+dva_to_px(random.uniform(0, 1),h=screen_height,d=screen_distance,r=sizeIs)
-    flashPos=random.uniform(-win.size[0]/4,win.size[1]/4)
+    fixation.color='white'
+    inicdentON=False
     """Run Trial Routine"""
     #region [rgba(10, 183, 206, 0.14)]
+    print("incident happens at frame ", incidentFrame)
+    trialStart = globalClock.getTime()
+    trialClock.reset()
+    print("audio delays", audioDelays[trialN])
+    print("visual delays", visualDelays[trialN])
+    print("incident time", incidentTime)
+    incidentTimes.append(incidentTime)
+
     while continueRoutine:
-        fixation.color='white'
         t = trialClock.getTime()
-        tThisFlip = win.getFutureFlipTime(clock=routineTimer)
-        tThisFlipGlobal = win.getFutureFlipTime(clock=None)
+        tThisFlip = win.getFutureFlipTime(clock=phaseTimer)
         frameN = frameN + 1
         
-        current_time = clock.getTime()
-        delta_time=current_time-last_frame_time
-        last_frame_time = current_time
-        
-        # initiate fixation cross at the center of the screen
-        fixation.setAutoDraw(True)
+        current_time = clock.getTime() # current time in seconds
+        delta_time=current_time-last_frame_time # time elapsed since the last frame
+        last_frame_time = current_time # update the last frame time
 
+        fixation.setAutoDraw(True)   # initiate fixation cross at the center of the screen
         # initiate moving bar at the left edge of the screen
         if moving_bar.status == NOT_STARTED and t >= 0.0-frameTolerance:
-            moving_bar.frameNStart = frameN # exact frame index
             moving_bar.tStart = t # local t and not account for scr refresh
-            moving_bar.tStartRefresh = tThisFlipGlobal  # on global time
             win.timeOnFlip(moving_bar, 'tStartRefresh')  # time at next scr refresh
             moving_bar.setAutoDraw(True)
 
-        if moving_bar.status == STARTED and moving_bar.pos[0] < field_size[0]/2-horizontalOffset:
+        if moving_bar.status == STARTED and t < (moving_bar.tStart + totalDur-frameTolerance):
             # moving bar moves to the right edge of the screen
-            new_pos_x = moving_bar.pos[0] + speed * delta_time*60
+            new_pos_x = moving_bar.pos[0] + speed * delta_time * 60
+            flash_pos_x=flash.pos[0] + speed * delta_time * 60
             moving_bar.pos = [new_pos_x, moving_bar.pos[1]]
-        elif moving_bar.status == STARTED and moving_bar.pos[0] >= field_size[0]/2-horizontalOffset:
+            flash.pos = [flash_pos_x, flash.pos[1]]
+        elif t>=totalDur-frameTolerance:#moving_bar.pos[0] >= field_size[0]/2-horizontalOffset:
+            #print("total dur",totalDur)
+            trial_durs.append(totalDur)
             continueRoutine=False
 
-
-
-        if flash.status == NOT_STARTED and moving_bar.pos[0] >= flashPos and t >= 0.0-frameTolerance:
-            flash.pos = [flashPos, dva_to_px(1,h=screen_height,d=screen_distance,r=sizeIs)]
-            flash.frameNStart = frameN
+        if flash.status == NOT_STARTED and frameN == incidentFrame+visualDelays[trialN]:
+            flash.frameNStart=frameN
             flash.tStart = t
-            flash.tStartRefresh = tThisFlipGlobal
+            print("flashed at time ", flash.tStart)
             win.timeOnFlip(flash, 'tStartRefresh')
             flash.setAutoDraw(True)
+            flashTime.append(flash.tStart)
 
         if flash.status == STARTED and frameN >= (flash.frameNStart + 1):
             flash.setAutoDraw(False)
 
                 # initiate audio cue and flash when moving bar is at the center of the screen
-        if burst.status == NOT_STARTED and flash.status==STARTED:
-            if t >= flash.tStart - frameTolerance:
-                burst.frameNStart = frameN
-                burst.tStart = t
-                burst.tStartRefresh = tThisFlipGlobal
-                win.timeOnFlip(burst, 'tStartRefresh')
-                burst.play(when=win)  # sync with win flip
-                burst.status = STARTED
-
-
-
+        if burst.status == NOT_STARTED and frameN == incidentFrame+audioDelays[trialN]:
+            burst.tStart = t
+            print("bursted at time ", burst.tStart)
+            win.timeOnFlip(burst, 'tStartRefresh')
+            burst.play(when=win)  # sync with win flip
+            burst.status = STARTED
+            audioTime.append(burst.tStart)
 
         # Flip the screen to show the moving bar after all the components are drawn
-        if continueRoutine:  # don't flip if this routine is over or we'll get a blank screen
-            win.flip()
+        #if continueRoutine:  # don't flip if this routine is over or we'll get a blank screen
+        win.flip()
         # check for quit (typically the Esc key)
         if endExpNow or defaultKeyboard.getKeys(keyList=["escape"]):
-            core.quit()
-
+            endExpNow=True
+            break
     # ending routine "trial"
     for thisComponent in trialComponents:
         if hasattr(thisComponent, "setAutoDraw"):
             thisComponent.setAutoDraw(False)
     # the Routine "trial" was not non-slip safe, so reset the non-slip timer
-    routineTimer.reset()
+    phaseTimer.reset()
     win.flip()
-
+    trialEnd = globalClock.getTime()
+    print("Trial duration is ", trialEnd-trialStart)
     #endregion
     # wait for 0.2 second before starting the response phase
-    core.wait(0.2)
+    core.wait(0.10)
 
     #region [rgba(88, 206, 10, 0.14)]
     # prepare to start Routine Response
@@ -328,34 +352,34 @@ while trialN<maxTrials and not endExpNow:
 
     # -- run the response routine
     waitResponse = True
-    timerResponse=core.Clock()
-    t = timerResponse.getTime()
+    t = phaseTimer.getTime()
     tResponseStart=t
 
-    while waitResponse:
-        tThisFlip = win.getFutureFlipTime(clock=timerResponse)
-        tThisFlipGlobal = win.getFutureFlipTime(clock=None)
+    while waitResponse and not endExpNow:
+        tThisFlip = win.getFutureFlipTime(clock=phaseTimer)
         fixation.setAutoDraw(True)
         giveResponseText.setAutoDraw(True)
         giveResponseText.pos = [0, -dva_to_px(1,h=screen_height,d=screen_distance,r=sizeIs)]
-        response = responseKeys.getKeys(keyList=['left', 'right'], waitRelease=True)
-        t = timerResponse.getTime()
+        response = responseKeys.getKeys(keyList=['up', 'down'], waitRelease=True)
+        t = phaseTimer.getTime()
 
         if len(response)>0:
             waitResponse = False
             #all_responses.append(theseKeys[-1].name)
-            if theseKeys[-1].name == 'left':
-                all_responses.append(0)
-            elif theseKeys[-1].name == 'right':
-                all_responses.append(1) # 0 for lagging, 1 for leading
+            if response[-1].name == 'up': # 1 up for leading
+                all_responses.append(1)
+            elif response[-1].name == 'down': # 0 down for lagging
+                all_responses.append(0) # 0 for lagging, 1 for leading
             # record time of response since the start of the response phase
-            tRespEnd=timerResponse.getTime()
+            tRespEnd=phaseTimer.getTime()
             responseTimes.append(tRespEnd-tResponseStart)
         else:
             waitResponse = True
         # check for quit (typically the Esc key)
         if endExpNow or defaultKeyboard.getKeys(keyList=["escape"]):
-            core.quit()
+            endExpNow=True
+            
+            
         # refresh the screen
         if waitResponse:  # don't flip if this routine is over or we'll get a blank screen
             win.flip()
@@ -364,7 +388,51 @@ while trialN<maxTrials and not endExpNow:
     for thisComponent in responseComponents:
         if hasattr(thisComponent, "setAutoDraw"):
             thisComponent.setAutoDraw(False)
+    # the Routine "Response" was not non-slip safe, so reset the non-slip timer
+    phaseTimer.reset()
+
     # endregion
+
+    #end region
+    # End of Screen Space to End the experiment
+
+while True:
+    haveRestText.text='End of the Experiment'
+    haveRestText.setAutoDraw(True)
+    win.flip()
+    if defaultKeyboard.getKeys(keyList=["space"]):
+        endExpNow=True
+        # # save the data
+
+        # save the data to .mat file    
+        sio.savemat(filename+".mat", {'responses':all_responses, 'responseTimes':responseTimes, 'incidentTimesAimed':incidentTimes,
+                            'audioDelaysAimed':audioDelays[:trialN], 'visualDelaysAimed':visualDelays[:trialN],
+                            'trialDurations':trial_durs,
+                            'audioTime':audioTime, 'flashTime':flashTime, 'trialNum':trialNum})
+        # savemat(filename, {'responses':responses, 'responseTimes':responseTimes, 'incidentTimes':incidentTimes, 'audioDelays':audioDelays, 'visualDelays':visualDelays})
+        
+        # also create a csv file
+        # first create a dataframe
+
+        df=pd.DataFrame({'responses':all_responses, 'responseTimes':responseTimes, 'incidentTimesAimed':incidentTimes,
+                           'audioDelaysAimed':audioDelays[:trialN], 'visualDelaysAimed':visualDelays[:trialN],
+                            'audioTime':audioTime, 'flashTime':flashTime, 'trialNum':trialNum})
+        print(df[incident_imes])
+        # if the data file csv not exist, create it
+        if not os.path.exists(filename+".csv"):
+            # create a csv file
+            with open(filename+".csv", 'w') as f:
+                df.to_csv(f)
+
+        # save the dataframe to a csv
+        df.to_csv(filename+".csv")
+
+
+        win.close()
+        core.quit()
+    #endregion
+
+    
 
 
 # end experiment
