@@ -43,7 +43,8 @@ import scipy.io as sio
 import pandas as pd
 
 
-timing_generator = TimingGenerator()
+
+timing_generator = TimingGenerator( trial_per_condition=10)
 audioDelays, visualDelays = timing_generator.generate_audio_visual_delays()
 incidentPoints = timing_generator.generate_incident_times()
 initialBarSide = timing_generator.initial_bar_side()
@@ -53,7 +54,7 @@ initialBarSide = timing_generator.initial_bar_side()
 prefs.hardware['audioLib'] = ['sounddevice']
 
 """          Experiment INFO Setup"""
-# Store info about the experiment session
+# Store info about the experiment se ssion
 psychopyVersion = '2022.2.4'
 expName = 'av_v_fle' 
 expInfo = {
@@ -65,11 +66,11 @@ expInfo = {
 """ Dialog Box for Experiment Info"""
 # dlg = gui.DlgFromDict(dictionary=expInfo, sortKeys=False, title=expName)
 # if dlg.OK == False:
-#     core.quit()  # user pressed cancel
+#       core.quit()  # user pressed cancel
 expInfo['date'] = data.getDateStr()  # add a simple timestamp
 # expInfo['expName'] = expName
 # expInfo['psychopyVersion'] = psychopyVersion
-# Ensure that relative paths start from the same directory as this script
+# Ens ure that relative paths start from the same directory as this script
 _thisDir = os.path.dirname(os.path.abspath(__file__))
 os.chdir(_thisDir)
 # Data file name stem = absolute path + name; later add .psyexp, .csv, .log, etc
@@ -77,7 +78,7 @@ filename = _thisDir + os.sep + u'data\%s_%s_%s' % (expInfo['participant'], expNa
 
 #setup screen properties
 monitor_options = {
-    "asusZenbook14": { "sizeIs": 800,    "screen_width": 15,   "screen_height": 15,    "screen_distance": 60    },
+    "asusZenbook14": { "sizeIs": 1080,    "screen_width": 30.5,   "screen_height": 18,    "screen_distance": 60    },
     "labMon": {  "sizeIs": 1024,        "screen_width": 28,        "screen_height": 28,        "screen_distance": 60    }}
 monitorSpecs=monitor_options["asusZenbook14"]
 sizeIs=monitorSpecs["sizeIs"] # 1024
@@ -86,25 +87,24 @@ screen_height=monitorSpecs["screen_height"] #28 # 16.5 asus
 screen_distance=monitorSpecs["screen_distance"] #60 # 57 asus
 # define monitor
 myMon=monitors.Monitor('asusMon', width=screen_width, distance=57)
-myMon.setSizePix((sizeIs, sizeIs))
+#myMon.setSizePix((sizeIs, sizeIs))
 selectedMon=myMon
 win = visual.Window(size=(sizeIs,sizeIs),
                     fullscr=True,  monitor=myMon, units='pix',  color=[0, 0, 0], useFBO=True, screen=1, colorSpace='rgb')
 exp = data.ExperimentHandler(name="av_v_fle",version='0.1.0')
 
 
-field_size=[sizeIs,sizeIs]
 win.monitor.setWidth(screen_width)
 win.monitor.setDistance(screen_distance)
 
 refreshRate=win.getActualFrameRate()
 expInfo['frameRate']=refreshRate
-if expInfo['frameRate'] != None:
+if expInfo['frameRate']!= None:
     frameDur = 1.0 / round(expInfo['frameRate'])
 else:
     frameDur = 1.0 / 60.0  # could not measure, so guess
 
-#print(win.size)
+# print(win.size)
 def dva2height(dva):
     return dva_to_px(dva, h=screen_height, d=screen_distance, r=sizeIs)/win.size[1]
 
@@ -121,12 +121,12 @@ barWidth=dva_to_px(size_in_deg=0.2,h=screen_height,d=screen_distance,r=sizeIs)
 barHeight=dva_to_px(size_in_deg=0.7,h=screen_height,d=screen_distance,r=sizeIs)
 #barWidth=100
 
-horizontalOffset=dva_to_px(1,h=screen_height,d=screen_distance,r=sizeIs)
+horizontalOffset=dva_to_px(3,h=screen_height,d=screen_distance,r=sizeIs)
 movingBarYPos=-dva_to_px(1,screen_height,screen_distance,sizeIs)
 
 moving_bar = visual.Rect(win=win, name='moving_bar',
     width=barWidth, height=barHeight,
-    ori=0, pos=(-win.size[0]/2, movingBarYPos),
+    ori=0, pos=(-win.size[1]/2, movingBarYPos),
     lineWidth=0, lineColor=barColor, lineColorSpace='rgb',
     fillColor=barColor, fillColorSpace='rgb',
     opacity=1, depth=-1.0, interpolate=True,units='pix')
@@ -158,7 +158,7 @@ frameN = -1
 win.setMouseVisible(False)    
 trialN=0
 maxTrials=3
-haveRest=False
+haveRest=True
 haveRestText=visual.TextStim(win, text='Press space to continue', color=[1, 1, 1], units='pix', height=20)
 haveRestNum=1
 space2pass=keyboard.Keyboard()
@@ -173,7 +173,7 @@ phaseTimer = core.Clock()  # to track time remaining of each (possibly non-sl€
 responseKeys = keyboard.Keyboard(backend='iohub')
 all_responses=[]
 responseTimes=[]
-totalDistance=win.size[0]-horizontalOffset*2
+totalDistance=win.size[1]-horizontalOffset*2
 
 ## Save the data
 incident_imes=[]
@@ -184,6 +184,7 @@ audioTime=[]
 flashTime=[]
 incidentTimes=[]
 trialNum=[]
+maxTrials=len(visualDelays-1)
 #region [rgba(206, 10, 118, 0.14)]
 # Start Routine "trial"
 while trialN<maxTrials and not endExpNow:
@@ -196,7 +197,10 @@ while trialN<maxTrials and not endExpNow:
     incidentTime=incidentPoints[trialN]/1000 # ms to s
     incidentFrame=int(incidentTime*refreshRate)
     # have a rest screen
-    haveRest=True
+    if trialN%20==0 and trialN>0:
+        haveRestText.text=f'End of {haveRestNum} trials. Press space to continue'
+        haveRestNum+=1
+        haveRest=True
     while haveRest:
         haveRestText.draw()
         win.flip()
@@ -205,8 +209,7 @@ while trialN<maxTrials and not endExpNow:
         if len(_space2pass_allKeys)>0:
             haveRest=False
 
-    # Update the trial number
-    trialN+=1
+
     win.flip(clearBuffer=True)
     continueRoutine = True
     _timeToFirstFrame = win.getFutureFlipTime(clock="now")
@@ -234,7 +237,7 @@ while trialN<maxTrials and not endExpNow:
 
     # Set the initial position of the moving bar dependent on the trial
     sideBar=initialBarSide[trialN]# 1 for right, -1 for left
-    movingBarXPos0=sideBar*(win.size[0]/2-horizontalOffset)# if sideBar is -1, moving bar starts from the left edge of the screen vice-versa
+    movingBarXPos0=sideBar*(win.size[1]/2-horizontalOffset)# if sideBar is -1, moving bar starts from the left edge of the screen vice-versa
     moving_bar.pos = [movingBarXPos0,movingBarYPos]
     flash.pos[0] = movingBarXPos0
     flash.pos[1]=dva_to_px(1,h=screen_height,d=screen_distance,r=sizeIs)
@@ -251,14 +254,16 @@ while trialN<maxTrials and not endExpNow:
     inicdentON=False
     """Run Trial Routine"""
     #region [rgba(10, 183, 206, 0.14)]
-    print("incident happens at frame ", incidentFrame)
+    # print("incident happens at frame ", incidentFrame)
     trialStart = globalClock.getTime()
     trialClock.reset()
-    print("audio delays", audioDelays[trialN])
-    print("visual delays", visualDelays[trialN])
-    print("incident time", incidentTime)
+    # print("audio delays", audioDelays[trialN])
+    # print("visual delays", visualDelays[trialN])
+    # print("incident time", incidentTime)
     incidentTimes.append(incidentTime)
+    
 
+    
     while continueRoutine:
         t = trialClock.getTime()
         tThisFlip = win.getFutureFlipTime(clock=phaseTimer)
@@ -289,7 +294,7 @@ while trialN<maxTrials and not endExpNow:
         if flash.status == NOT_STARTED and frameN == incidentFrame+visualDelays[trialN]:
             flash.frameNStart=frameN
             flash.tStart = t
-            print("flashed at time ", flash.tStart)
+            #print("flashed at time ", flash.tStart)
             win.timeOnFlip(flash, 'tStartRefresh')
             flash.setAutoDraw(True)
             flashTime.append(flash.tStart)
@@ -300,7 +305,7 @@ while trialN<maxTrials and not endExpNow:
                 # initiate audio cue and flash when moving bar is at the center of the screen
         if burst.status == NOT_STARTED and frameN == incidentFrame+audioDelays[trialN]:
             burst.tStart = t
-            print("bursted at time ", burst.tStart)
+            #print("bursted at time ", burst.tStart)
             win.timeOnFlip(burst, 'tStartRefresh')
             burst.play(when=win)  # sync with win flip
             burst.status = STARTED
@@ -312,11 +317,16 @@ while trialN<maxTrials and not endExpNow:
         # check for quit (typically the Esc key)
         if endExpNow or defaultKeyboard.getKeys(keyList=["escape"]):
             endExpNow=True
+            all_responses.append(999)
+            responseTimes.append(999)
+            trialN-=1
             break
     # ending routine "trial"
     for thisComponent in trialComponents:
         if hasattr(thisComponent, "setAutoDraw"):
             thisComponent.setAutoDraw(False)
+    # Update the trial number
+    trialN+=1
     # the Routine "trial" was not non-slip safe, so reset the non-slip timer
     phaseTimer.reset()
     win.flip()
@@ -366,6 +376,7 @@ while trialN<maxTrials and not endExpNow:
         if len(response)>0:
             waitResponse = False
             #all_responses.append(theseKeys[-1].name)
+            
             if response[-1].name == 'up': # 1 up for leading
                 all_responses.append(1)
             elif response[-1].name == 'down': # 0 down for lagging
@@ -377,6 +388,7 @@ while trialN<maxTrials and not endExpNow:
             waitResponse = True
         # check for quit (typically the Esc key)
         if endExpNow or defaultKeyboard.getKeys(keyList=["escape"]):
+
             endExpNow=True
             
             
@@ -388,9 +400,13 @@ while trialN<maxTrials and not endExpNow:
     for thisComponent in responseComponents:
         if hasattr(thisComponent, "setAutoDraw"):
             thisComponent.setAutoDraw(False)
+                    # save the data to .mat file    
+            sio.savemat(filename+".mat", {'responses':all_responses, 'responseTimes':responseTimes, 'incidentTimesAimed':incidentTimes,
+                            'audioDelaysAimed':audioDelays[:trialN], 'visualDelaysAimed':visualDelays[:trialN],
+                            'trialDurations':trial_durs,
+                            'audioTime':audioTime, 'flashTime':flashTime, 'trialNum':trialNum})
     # the Routine "Response" was not non-slip safe, so reset the non-slip timer
     phaseTimer.reset()
-
     # endregion
 
     #end region
@@ -403,6 +419,13 @@ while True:
     if defaultKeyboard.getKeys(keyList=["space"]):
         endExpNow=True
         # # save the data
+        
+        
+        # Zip the arrays to the shortest length
+        zipped_data = list(zip(all_responses, responseTimes, incidentTimes, audioDelays[:trialN], visualDelays[:trialN], trial_durs, audioTime, flashTime, trialNum))
+        # Unzip the data back into individual lists
+        all_responses, responseTimes, incidentTimes, audioDelays, visualDelays, trial_durs, audioTime, flashTime, trialNum = map(list, zip(*zipped_data))
+  
 
         # save the data to .mat file    
         sio.savemat(filename+".mat", {'responses':all_responses, 'responseTimes':responseTimes, 'incidentTimesAimed':incidentTimes,
@@ -410,12 +433,14 @@ while True:
                             'trialDurations':trial_durs,
                             'audioTime':audioTime, 'flashTime':flashTime, 'trialNum':trialNum})
         # savemat(filename, {'responses':responses, 'responseTimes':responseTimes, 'incidentTimes':incidentTimes, 'audioDelays':audioDelays, 'visualDelays':visualDelays})
-        
+      
+      
+
         # also create a csv file
         # first create a dataframe
-
         df=pd.DataFrame({'responses':all_responses, 'responseTimes':responseTimes, 'incidentTimesAimed':incidentTimes,
                            'audioDelaysAimed':audioDelays[:trialN], 'visualDelaysAimed':visualDelays[:trialN],
+                            'trialDurations':trial_durs,
                             'audioTime':audioTime, 'flashTime':flashTime, 'trialNum':trialNum})
         print(df[incident_imes])
         # if the data file csv not exist, create it
