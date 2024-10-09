@@ -296,11 +296,11 @@ while trialN<maxTrials and not endExpNow:
 
         if moving_bar.status == STARTED and t < (moving_bar.tStart + totalDur-frameTolerance):
             # moving bar moves to the right edge of the screen
-            new_pos_x = moving_bar.pos[0] + speed * delta_time * 60
+            new_pos_x = moving_bar.pos[0] + speed 
             moving_bar.pos = [new_pos_x, moving_bar.pos[1]]
 
             # if frameN <= incidentFrame+visualDelays[trialN]:
-            #     flash_pos_x=flash.pos[0] + speed * delta_time * 60
+            #     flash_pos_x=flash.pos[0] + speed 
             #     flash.pos = [new_pos_x, flash.pos[1]]
             # elif frameN == incidentFrame:
             #     bar_at_flash_X.append(moving_bar.pos[0])
@@ -312,7 +312,7 @@ while trialN<maxTrials and not endExpNow:
             continueRoutine=False
 
         if flash.status == NOT_STARTED and frameN <= (incidentFrame):
-            flash_pos_x=flash.pos[0] + speed * delta_time * 60
+            flash_pos_x=flash.pos[0] + speed 
             flash.pos = [flash_pos_x, flash.pos[1]]
             if frameN == incidentFrame:
                 bar_at_flash_X.append(moving_bar.pos[0])
@@ -397,10 +397,10 @@ while trialN<maxTrials and not endExpNow:
             waitResponse = False
             #all_responses.append(theseKeys[-1].name)
             
-            if response[-1].name == 'up': # 1 up for leading
-                all_responses.append(1)
-            elif response[-1].name == 'down': # 0 down for lagging
-                all_responses.append(0) # 0 for lagging, 1 for leading
+            if response[-1].name == 'up': # 1 up for lag
+                all_responses.append(0)
+            elif response[-1].name == 'down': # 0 down for lead
+                all_responses.append(1) # 1 for lagging, 0 for leading
             # record time of response since the start of the response phase
             tRespEnd=phaseTimer.getTime()
             responseTimes.append(tRespEnd-tResponseStart)
