@@ -44,14 +44,17 @@ import pandas as pd
 
 
 
-timing_generator = TimingGenerator( trial_per_condition=10)
+timing_generator = TimingGenerator( trial_per_condition=8)
 audioDelays, visualDelays = timing_generator.generate_audio_visual_delays()
 incidentPoints = timing_generator.generate_incident_times()
 initialBarSide = timing_generator.initial_bar_side()
 
 
 # Set the audio library to pyo
-prefs.hardware['audioLib'] = ['sounddevice']
+prefs.hardware['audioLib'] = 'PTB'
+prefs.hardware['audioLatencyMode'] = '4' 
+  
+ 
 
 """          Experiment INFO Setup"""
 # Store info about the experiment se ssion
@@ -313,22 +316,18 @@ while trialN<maxTrials and not endExpNow:
             flash.pos = [flash_pos_x, flash.pos[1]]
             if frameN == incidentFrame:
                 bar_at_flash_X.append(moving_bar.pos[0])
-
                 flash.frameNStart=frameN
                 flash.tStart = t
-                #print("flashed at time ", flash.tStart)
                 win.timeOnFlip(flash, 'tStartRefresh')
                 flash.draw()
                 flashTime.append(flash.tStart)
                 flashPostionX.append(flash.pos[0])
 
-
         # initiate audio cue and flash when moving bar is at the center of the screen
-        if burst.status == NOT_STARTED and frameN == incidentFrame+visualDelays[trialN]+audioDelays[trialN]:
+        if burst.status == NOT_STARTED and frameN == incidentFrame+audioDelays[trialN]:
             burst.tStart = t
-            #print("bursted at time ", burst.tStart)
             win.timeOnFlip(burst, 'tStartRefresh')
-            burst.play(when=win)  # sync with win flip
+            burst.play()  # sync with win flip
             burst.status = STARTED
             audioTime.append(burst.tStart)
 
