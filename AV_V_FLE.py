@@ -78,7 +78,7 @@ filename = _thisDir + os.sep + u'data\%s_%s_%s' % (expInfo['participant'], expNa
 
 #setup screen properties
 monitor_options = {
-    "asusZenbook14": { "sizeIs": 1080,    "screen_width": 30.5,   "screen_height": 18,    "screen_distance": 60    },
+    "asusZenbook14": { "sizeIs": 1024,    "screen_width": 30.5,   "screen_height": 18,    "screen_distance": 60    },
     "labMon": {  "sizeIs": 1024,        "screen_width": 28,        "screen_height": 28,        "screen_distance": 60    }}
 monitorSpecs=monitor_options["asusZenbook14"]
 sizeIs=monitorSpecs["sizeIs"] # 1024
@@ -90,7 +90,7 @@ myMon=monitors.Monitor('asusMon', width=screen_width, distance=57)
 #myMon.setSizePix((sizeIs, sizeIs))
 selectedMon=myMon
 win = visual.Window(size=(sizeIs,sizeIs),
-                    fullscr=True,  monitor=myMon, units='pix',  color=[0, 0, 0], useFBO=True, screen=1, colorSpace='rgb')
+                    fullscr=True,  monitor=myMon, units='pix',  color="black", useFBO=True, screen=1, colorSpace='rgb')
 exp = data.ExperimentHandler(name="av_v_fle",version='0.1.0')
 
 
@@ -107,7 +107,7 @@ else:
 # print(win.size)
 def dva2height(dva):
     return dva_to_px(dva, h=screen_height, d=screen_distance, r=sizeIs)/win.size[1]
-
+print(refreshRate)
 print("refresh rate is", refreshRate)
 frameDur=1/refreshRate
 print("frame dur is", frameDur)
@@ -116,13 +116,13 @@ print("frame dur is", frameDur)
 # Initialize components for Routine "trial"
 trialClock = core.Clock()
 
-barColor="black"
+barColor="red"
 barWidth=dva_to_px(size_in_deg=0.2,h=screen_height,d=screen_distance,r=sizeIs)
 barHeight=dva_to_px(size_in_deg=0.7,h=screen_height,d=screen_distance,r=sizeIs)
 #barWidth=100
 
 horizontalOffset=dva_to_px(3,h=screen_height,d=screen_distance,r=sizeIs)
-movingBarYPos=-dva_to_px(1,screen_height,screen_distance,sizeIs)
+movingBarYPos=-dva_to_px(0.5,screen_height,screen_distance,sizeIs)
 
 moving_bar = visual.Rect(win=win, name='moving_bar',
     width=barWidth, height=barHeight,
@@ -134,19 +134,20 @@ burst = sound.Sound('A', secs=0.08, stereo=True, hamming=False,
     name='burst')
 burst.setVolume(0.5)
 
-
+flashColor="green"
 flash = visual.Rect(win=win, name='flash',
     width=barWidth, height=barHeight,
     ori=0, pos=(0, 0),
-    lineWidth=0, lineColor=barColor, lineColorSpace='rgb',
-    fillColor=barColor, fillColorSpace='rgb',
+    lineWidth=0, lineColor=flashColor, lineColorSpace='rgb',
+    fillColor=flashColor, fillColorSpace='rgb',
     opacity=1, depth=-3.0, interpolate=True,units='pix')
 
 # Initialize components for Routine "Response"
 ResponseClock = core.Clock()
 fixationSize=dva_to_px(size_in_deg=0.1,h=screen_height,d=screen_distance,r=sizeIs)
 #print("fixation size is ",fixationSize)
-fixation =   visual.Circle(win, radius=fixationSize, fillColor='white',colorSpace='rgb', units='pix',pos=(0, 0))
+fixation = visual.Circle(win, radius=fixationSize, fillColor=None, lineColor='white', colorSpace='rgb', units='pix',
+                        pos=(0, -dva_to_px(3,screen_height,screen_distance,sizeIs)))
 giveResponseText = visual.TextStim(win=win, text='Press left for flash "Lagging" or right for "Leading" responses', color=[1, 1, 1], units='pix', height=20)
 
 # create a default keyboard (e.g. to check for escape)
@@ -184,12 +185,14 @@ audioTime=[]
 flashTime=[]
 incidentTimes=[]
 trialNum=[]
+flashPostionX=[]
+bar_at_flash_X=[]
+directions=[]
 maxTrials=len(visualDelays-1)
 #region [rgba(206, 10, 118, 0.14)]
 # Start Routine "trial"
 while trialN<maxTrials and not endExpNow:
     trialNum.append(trialN+1)
-    tStart = globalClock.getTime()
     _space2pass_allKeys = []
     space2pass.keys = []
     space2pass.clearEvents(eventType='keyboard')
@@ -215,11 +218,12 @@ while trialN<maxTrials and not endExpNow:
     _timeToFirstFrame = win.getFutureFlipTime(clock="now")
     frameN = -1
     
-    # # wait for 0.2 second before starting the trial
+    tStart = globalClock.getTime()
+    # # wait for 0.3 second before starting the trial
     waiterTime=0
-    while  waiterTime <0.2:
+    while  waiterTime <0.3:
         waiterTime = globalClock.getTime() - tStart
-        fixation.draw()
+        #fixation.draw()
         win.flip()
 
     # keep track of which components have finished
@@ -233,14 +237,15 @@ while trialN<maxTrials and not endExpNow:
             thisComponent.status = NOT_STARTED
 
     # Add a short delay before starting the trial
-    core.wait(0.1)
+    #core.wait(0.1)
 
     # Set the initial position of the moving bar dependent on the trial
     sideBar=initialBarSide[trialN]# 1 for right, -1 for left
+    directions.append(-1*sideBar)
     movingBarXPos0=sideBar*(win.size[1]/2-horizontalOffset)# if sideBar is -1, moving bar starts from the left edge of the screen vice-versa
     moving_bar.pos = [movingBarXPos0,movingBarYPos]
     flash.pos[0] = movingBarXPos0
-    flash.pos[1]=dva_to_px(1,h=screen_height,d=screen_distance,r=sizeIs)
+    flash.pos[1]=dva_to_px(0.5,h=screen_height,d=screen_distance,r=sizeIs)
 
     # Define the speed of the bar in pixels per second
     speed = -1*sideBar*dva_to_px(0.16)  # Adjust this value as needed
@@ -263,17 +268,23 @@ while trialN<maxTrials and not endExpNow:
     incidentTimes.append(incidentTime)
     
 
-    
+    if visualDelays[trialN]<0:
+        flash.pos[0] =flash.pos[0] + -1*visualDelays[trialN]*speed
+    elif visualDelays[trialN]>0:
+        flash.pos[0] =flash.pos[0] + -1*visualDelays[trialN]*speed
     while continueRoutine:
         t = trialClock.getTime()
         tThisFlip = win.getFutureFlipTime(clock=phaseTimer)
         frameN = frameN + 1
         
+
+
+
         current_time = clock.getTime() # current time in seconds
         delta_time=current_time-last_frame_time # time elapsed since the last frame
         last_frame_time = current_time # update the last frame time
 
-        fixation.setAutoDraw(True)   # initiate fixation cross at the center of the screen
+        #fixation.setAutoDraw(True)   # initiate fixation cross at the center of the screen
         # initiate moving bar at the left edge of the screen
         if moving_bar.status == NOT_STARTED and t >= 0.0-frameTolerance:
             moving_bar.tStart = t # local t and not account for scr refresh
@@ -283,27 +294,37 @@ while trialN<maxTrials and not endExpNow:
         if moving_bar.status == STARTED and t < (moving_bar.tStart + totalDur-frameTolerance):
             # moving bar moves to the right edge of the screen
             new_pos_x = moving_bar.pos[0] + speed * delta_time * 60
-            flash_pos_x=flash.pos[0] + speed * delta_time * 60
             moving_bar.pos = [new_pos_x, moving_bar.pos[1]]
-            flash.pos = [flash_pos_x, flash.pos[1]]
+
+            # if frameN <= incidentFrame+visualDelays[trialN]:
+            #     flash_pos_x=flash.pos[0] + speed * delta_time * 60
+            #     flash.pos = [new_pos_x, flash.pos[1]]
+            # elif frameN == incidentFrame:
+            #     bar_at_flash_X.append(moving_bar.pos[0])
+
+
+
         elif t>=totalDur-frameTolerance:#moving_bar.pos[0] >= field_size[0]/2-horizontalOffset:
-            #print("total dur",totalDur)
             trial_durs.append(totalDur)
             continueRoutine=False
 
-        if flash.status == NOT_STARTED and frameN == incidentFrame+visualDelays[trialN]:
-            flash.frameNStart=frameN
-            flash.tStart = t
-            #print("flashed at time ", flash.tStart)
-            win.timeOnFlip(flash, 'tStartRefresh')
-            flash.setAutoDraw(True)
-            flashTime.append(flash.tStart)
+        if flash.status == NOT_STARTED and frameN <= (incidentFrame):
+            flash_pos_x=flash.pos[0] + speed * delta_time * 60
+            flash.pos = [flash_pos_x, flash.pos[1]]
+            if frameN == incidentFrame:
+                bar_at_flash_X.append(moving_bar.pos[0])
 
-        if flash.status == STARTED and frameN >= (flash.frameNStart + 1):
-            flash.setAutoDraw(False)
+                flash.frameNStart=frameN
+                flash.tStart = t
+                #print("flashed at time ", flash.tStart)
+                win.timeOnFlip(flash, 'tStartRefresh')
+                flash.draw()
+                flashTime.append(flash.tStart)
+                flashPostionX.append(flash.pos[0])
 
-                # initiate audio cue and flash when moving bar is at the center of the screen
-        if burst.status == NOT_STARTED and frameN == incidentFrame+audioDelays[trialN]:
+
+        # initiate audio cue and flash when moving bar is at the center of the screen
+        if burst.status == NOT_STARTED and frameN == incidentFrame+visualDelays[trialN]+audioDelays[trialN]:
             burst.tStart = t
             #print("bursted at time ", burst.tStart)
             win.timeOnFlip(burst, 'tStartRefresh')
@@ -334,12 +355,12 @@ while trialN<maxTrials and not endExpNow:
     print("Trial duration is ", trialEnd-trialStart)
     #endregion
     # wait for 0.2 second before starting the response phase
-    core.wait(0.10)
+    #co re.wait(0.10)
 
     #region [rgba(88, 206, 10, 0.14)]
     # prepare to start Routine Response
     fixation.color='red'
-    fixation.draw()
+    #fixation.draw()
     win.flip()
     # set response keys to null before starting the response phase
     responseKeys.clearEvents()
@@ -367,7 +388,7 @@ while trialN<maxTrials and not endExpNow:
 
     while waitResponse and not endExpNow:
         tThisFlip = win.getFutureFlipTime(clock=phaseTimer)
-        fixation.setAutoDraw(True)
+        #fixation.setAutoDraw(True)
         giveResponseText.setAutoDraw(True)
         giveResponseText.pos = [0, -dva_to_px(1,h=screen_height,d=screen_distance,r=sizeIs)]
         response = responseKeys.getKeys(keyList=['up', 'down'], waitRelease=True)
@@ -404,7 +425,10 @@ while trialN<maxTrials and not endExpNow:
             sio.savemat(filename+".mat", {'responses':all_responses, 'responseTimes':responseTimes, 'incidentTimesAimed':incidentTimes,
                             'audioDelaysAimed':audioDelays[:trialN], 'visualDelaysAimed':visualDelays[:trialN],
                             'trialDurations':trial_durs,
-                            'audioTime':audioTime, 'flashTime':flashTime, 'trialNum':trialNum})
+                            'audioTime':audioTime, 'flashTime':flashTime, 'trialNum':trialNum,
+                            'flashPostionX':flashPostionX, 'bar_at_flash_X':bar_at_flash_X, 'directions':directions})
+    #fixation.setAutoDraw(False)
+
     # the Routine "Response" was not non-slip safe, so reset the non-slip timer
     phaseTimer.reset()
     # endregion
@@ -422,16 +446,17 @@ while True:
         
         
         # Zip the arrays to the shortest length
-        zipped_data = list(zip(all_responses, responseTimes, incidentTimes, audioDelays[:trialN], visualDelays[:trialN], trial_durs, audioTime, flashTime, trialNum))
+        zipped_data = list(zip(all_responses, responseTimes, incidentTimes, audioDelays[:trialN], visualDelays[:trialN], trial_durs, audioTime, flashTime, trialNum, flashPostionX, bar_at_flash_X, directions))
         # Unzip the data back into individual lists
-        all_responses, responseTimes, incidentTimes, audioDelays, visualDelays, trial_durs, audioTime, flashTime, trialNum = map(list, zip(*zipped_data))
+        all_responses, responseTimes, incidentTimes, audioDelays, visualDelays, trial_durs, audioTime, flashTime, trialNum,  flashPostionX, bar_at_flash_X, directions= map(list, zip(*zipped_data))
   
 
         # save the data to .mat file    
         sio.savemat(filename+".mat", {'responses':all_responses, 'responseTimes':responseTimes, 'incidentTimesAimed':incidentTimes,
                             'audioDelaysAimed':audioDelays[:trialN], 'visualDelaysAimed':visualDelays[:trialN],
                             'trialDurations':trial_durs,
-                            'audioTime':audioTime, 'flashTime':flashTime, 'trialNum':trialNum})
+                            'audioTime':audioTime, 'flashTime':flashTime, 'trialNum':trialNum,
+                            'flashPostionX':flashPostionX, 'bar_at_flash_X':bar_at_flash_X, 'directions':directions})
         # savemat(filename, {'responses':responses, 'responseTimes':responseTimes, 'incidentTimes':incidentTimes, 'audioDelays':audioDelays, 'visualDelays':visualDelays})
       
       
@@ -441,7 +466,8 @@ while True:
         df=pd.DataFrame({'responses':all_responses, 'responseTimes':responseTimes, 'incidentTimesAimed':incidentTimes,
                            'audioDelaysAimed':audioDelays[:trialN], 'visualDelaysAimed':visualDelays[:trialN],
                             'trialDurations':trial_durs,
-                            'audioTime':audioTime, 'flashTime':flashTime, 'trialNum':trialNum})
+                            'audioTime':audioTime, 'flashTime':flashTime, 'trialNum':trialNum,
+                            'flashPostionX':flashPostionX, 'bar_at_flash_X':bar_at_flash_X, 'directions':directions})
         print(df[incident_imes])
         # if the data file csv not exist, create it
         if not os.path.exists(filename+".csv"):
