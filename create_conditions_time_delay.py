@@ -1,10 +1,10 @@
 import numpy as np
 
 class TimingGenerator:
-    def __init__(self, trial_per_condition=12):
+    def __init__(self, trial_per_condition=10):
         self.trial_per_condition = trial_per_condition
-        self.audio_delays = [-10, -6, -4, -2, 0, 2, 4, 6, 10]
-        self.visual_delays = [-4, -2, -1, 0, 1, 2, 4]
+        self.audio_delays = [-6, -4,-2, 0, 2, 4, 6]
+        self.visual_delays = [-4, -2,-1, 0, 1, 2, 4]#[-4, -2, -1, 0, 1, 2, 4]
 
     def generate_audio_visual_delays(self):
         audio_visual_delays = []
@@ -34,7 +34,7 @@ class TimingGenerator:
     def generate_incident_times(self):
         audioDelay, visualDelay = self.generate_audio_visual_delays()
         trial_num = len(audioDelay)
-        incident_times = np.random.uniform(250, 1050, trial_num * 2)
+        incident_times = np.random.uniform(400, 900, trial_num * 2)
         return incident_times
     
     #random integers of -1 or +1 as length of incident_times uniformly
@@ -42,8 +42,25 @@ class TimingGenerator:
         return np.random.choice([-1, 1], len(self.generate_incident_times()))
     
 # # Create an instance of the TimingGenerator class
-# timing_generator = TimingGenerator()
-# audioDelay, visualDelay = timing_generator.generate_audio_visual_delays()
-# incident_times = timing_generator.generate_incident_times()
-# response = timing_generator.initial_bar_side()
+timing_generator = TimingGenerator()
+audioDelay, visualDelay = timing_generator.generate_audio_visual_delays()
+incident_times = timing_generator.generate_incident_times()
+response = timing_generator.initial_bar_side()
 # print(response[:50])
+# print(len(incident_times))
+# print(len(audioDelay))
+print("Number of trials: ", len(visualDelay))
+# print(audioDelay[:50])
+# print(visualDelay[:50])
+# number of unique trials
+print(len(set(zip(audioDelay, visualDelay))))
+# plot audio vs visual delays
+# import matplotlib.pyplot as plt
+# plt.plot(audioDelay, visualDelay, 'o')
+# plt.xticks(timing_generator.audio_delays)
+# plt.yticks(timing_generator.visual_delays)
+# plt.xlabel('Audio Delay')
+# plt.ylabel('Visual Delay')
+# plt.title('Audio vs Visual Delays')
+# plt.show()
+

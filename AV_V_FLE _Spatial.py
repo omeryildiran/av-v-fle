@@ -41,7 +41,11 @@ import random
 from create_conditions_time_delay import TimingGenerator
 import scipy.io as sio
 import pandas as pd
+import serial
+from ardunio_sound_opener import speaker_controller
 
+speaker_controller = speaker_controller()
+# speaker_controller.test_all_speakers()
 
 
 timing_generator = TimingGenerator( trial_per_condition=8)
@@ -93,7 +97,7 @@ myMon=monitors.Monitor('asusMon', width=screen_width, distance=57)
 #myMon.setSizePix((sizeIs, sizeIs))
 selectedMon=myMon
 win = visual.Window(size=(sizeIs,sizeIs),
-                    fullscr=False,  monitor=myMon, units='pix',  color="black", useFBO=True, screen=1, colorSpace='rgb')
+                    fullscr=True,  monitor=myMon, units='pix',  color="black", useFBO=True, screen=1, colorSpace='rgb')
 exp = data.ExperimentHandler(name="av_v_fle",version='0.1.0')
 
 
@@ -101,12 +105,6 @@ win.monitor.setWidth(screen_width)
 win.monitor.setDistance(screen_distance)
 
 refreshRate=win.getActualFrameRate()
-
-if refreshRate==None:
-    refreshRate=120
-
-
-print("refresh rate is ", refreshRate)
 expInfo['frameRate']=refreshRate
 if expInfo['frameRate']!= None:
     frameDur = 1.0 / round(expInfo['frameRate'])
@@ -141,7 +139,7 @@ moving_bar = visual.Rect(win=win, name='moving_bar',
     opacity=1, depth=-1.0, interpolate=True,units='pix')
 burst = sound.Sound('A', secs=0.08, stereo=True, hamming=False,
     name='burst')
-burst.setVolume(0.5)
+burst.setVolume(1)
 
 flashColor="green"
 flash = visual.Rect(win=win, name='flash',
@@ -266,8 +264,7 @@ while trialN<maxTrials and not endExpNow:
     last_frame_time = clock.getTime()
     fixation.color='white'
     inicdentON=False
-    """Run Trial Routine"""
-    #region [rgba(10, 183, 206, 0.14)]
+
     # print("incident happens at frame ", incidentFrame)
     trialStart = globalClock.getTime()
     trialClock.reset()
@@ -281,13 +278,19 @@ while trialN<maxTrials and not endExpNow:
         flash.pos[0] =flash.pos[0] + -1*visualDelays[trialN]*speed
     elif visualDelays[trialN]>0:
         flash.pos[0] =flash.pos[0] + -1*visualDelays[trialN]*speed
+    
+
+    # burst.setSound('A', secs=0.016)
+    # burst.setVolume(1)
+
+    """Run Trial Routine"""
+    #region [rgba(10, 183, 206, 0.14)]
     while continueRoutine:
+
         t = trialClock.getTime()
+
         tThisFlip = win.getFutureFlipTime(clock=phaseTimer)
         frameN = frameN + 1
-        
-
-
 
         current_time = clock.getTime() # current time in seconds
         delta_time=current_time-last_frame_time # time elapsed since the last frame
@@ -331,11 +334,16 @@ while trialN<maxTrials and not endExpNow:
 
         # initiate audio cue and flash when moving bar is at the center of the screen
         if burst.status == NOT_STARTED and frameN == incidentFrame+audioDelays[trialN]:
+            print("audio start time ", trialClock.getTime())
+            #speaker_controller.turn_on_speaker(trialN)
+            burst.play()  # sync with win flip
+            print("audio end time ", trialClock.getTime())
             burst.tStart = t
             win.timeOnFlip(burst, 'tStartRefresh')
-            burst.play()  # sync with win flip
             burst.status = STARTED
+
             audioTime.append(burst.tStart)
+
 
         # Flip the screen to show the moving bar after all the components are drawn
         #if continueRoutine:  # don't flip if this routine is over or we'll get a blank screen
@@ -347,6 +355,9 @@ while trialN<maxTrials and not endExpNow:
             responseTimes.append(999)
             trialN-=1
             break
+    #endregion
+    speaker_controller.turn_off_speaker(trialN)
+
     # ending routine "trial"
     for thisComponent in trialComponents:
         if hasattr(thisComponent, "setAutoDraw"):
@@ -358,9 +369,8 @@ while trialN<maxTrials and not endExpNow:
     win.flip()
     trialEnd = globalClock.getTime()
     print("Trial duration is ", trialEnd-trialStart)
-    #endregion
     # wait for 0.2 second before starting the response phase
-    #co re.wait(0.10)
+    #core.wait(0.10)
 
     #region [rgba(88, 206, 10, 0.14)]
     # prepare to start Routine Response
