@@ -135,7 +135,7 @@ movingBarYPos=-dva_to_px(0.5,screen_height,screen_distance,sizeIs)
 
 moving_bar = visual.Rect(win=win, name='moving_bar',
     width=barWidth, height=barHeight,
-    ori=0, pos=(-win.size[1]/2, movingBarYPos),
+    ori=0, pos=(-win.size[0]/2, movingBarYPos), # size is corrected to X size[0]
     lineWidth=0, lineColor=barColor, lineColorSpace='rgb',
     fillColor=barColor, fillColorSpace='rgb',
     opacity=1, depth=-1.0, interpolate=True,units='pix')
@@ -251,7 +251,7 @@ while trialN<maxTrials and not endExpNow:
     # Set the initial position of the moving bar dependent on the trial
     sideBar=initialBarSide[trialN]# 1 for right, -1 for left
     directions.append(-1*sideBar)
-    movingBarXPos0=sideBar*(win.size[1]/2-horizontalOffset)# if sideBar is -1, moving bar starts from the left edge of the screen vice-versa
+    movingBarXPos0=sideBar*(win.size[0]/2-horizontalOffset)# if sideBar is -1, moving bar starts from the left edge of the screen vice-versa
     moving_bar.pos = [movingBarXPos0,movingBarYPos]
     flash.pos[0] = movingBarXPos0
     flash.pos[1]=dva_to_px(0.5,h=screen_height,d=screen_distance,r=sizeIs)
