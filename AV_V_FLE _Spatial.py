@@ -52,6 +52,7 @@ timing_generator = TimingGenerator( trial_per_condition=8)
 audioDelays, visualDelays = timing_generator.generate_audio_visual_delays()
 incidentPoints = timing_generator.generate_incident_times()
 initialBarSide = timing_generator.initial_bar_side()
+incident_positions = timing_generator.generate_incident_positions()
 
 
 # Set the audio library to pyo

@@ -41,13 +41,22 @@ class TimingGenerator:
     def initial_bar_side(self):
         return np.random.choice([-1, 1], len(self.generate_incident_times()))
     
+    def generate_incident_positions(self):
+        audioDelay, visualDelay = self.generate_audio_visual_delays()
+        trial_num = len(audioDelay)
+        # divide screen to 16 parts and randomly select one part for each trial dont take the edges
+        incident_positions = np.random.uniform(3, 13, trial_num)
+        return incident_positions
+    
 # # Create an instance of the TimingGenerator class
 timing_generator = TimingGenerator()
 audioDelay, visualDelay = timing_generator.generate_audio_visual_delays()
 incident_times = timing_generator.generate_incident_times()
 response = timing_generator.initial_bar_side()
+incident_positions = timing_generator.generate_incident_positions()
+
 # print(response[:50])
-# print(len(incident_times))
+#print(len(incident_times))
 # print(len(audioDelay))
 print("Number of trials: ", len(visualDelay))
 # print(audioDelay[:50])
