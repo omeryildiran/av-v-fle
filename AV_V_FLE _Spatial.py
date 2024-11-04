@@ -95,15 +95,31 @@ screen_distance=monitorSpecs["screen_distance"] #60 # 57 asus
 myMon=monitors.Monitor('asusMon', width=screen_width, distance=57)
 #myMon.setSizePix((sizeIs, sizeIs))
 selectedMon=myMon
+
+on_mac=False
+
 win = visual.Window(size=(sizeIs,sizeIs),
-                    fullscr=True,  monitor=myMon, units='pix',  color="black", useFBO=True, screen=1, colorSpace='rgb')
+                    fullscr=False,  monitor=myMon, units='pix',  color="black", useFBO=True, screen=1, colorSpace='rgb')
 exp = data.ExperimentHandler(name="av_v_fle",version='0.1.0')
 
+print("screen size is ", win.size)
+#print(" frame rate is ", win.getActualFrameRate())
+#print("Full screen is ", win.fullscr)
+
+if win.getActualFrameRate()==None:
+    if on_mac:
+        refreshRate=120
+    else:
+        refreshRate=60
+else:
+    refreshRate=win.getActualFrameRate()
+
+print("refresh rate is", refreshRate)
 
 win.monitor.setWidth(screen_width)
 win.monitor.setDistance(screen_distance)
 
-refreshRate=win.getActualFrameRate()
+# refreshRate=win.getActualFrameRate()
 expInfo['frameRate']=refreshRate
 if expInfo['frameRate']!= None:
     frameDur = 1.0 / round(expInfo['frameRate'])
@@ -114,7 +130,6 @@ else:
 def dva2height(dva):
     return dva_to_px(dva, h=screen_height, d=screen_distance, r=sizeIs)/win.size[1]
 print(refreshRate)
-print("refresh rate is", refreshRate)
 frameDur=1/refreshRate
 print("frame dur is", frameDur)
 
@@ -127,7 +142,7 @@ barWidth=dva_to_px(size_in_deg=0.2,h=screen_height,d=screen_distance,r=sizeIs)
 barHeight=dva_to_px(size_in_deg=0.7,h=screen_height,d=screen_distance,r=sizeIs)
 #barWidth=100
 
-horizontalOffset=dva_to_px(3,h=screen_height,d=screen_distance,r=sizeIs)
+horizontalOffset=0#dva_to_px(3,h=screen_height,d=screen_distance,r=sizeIs)
 movingBarYPos=-dva_to_px(0.5,screen_height,screen_distance,sizeIs)
 
 moving_bar = visual.Rect(win=win, name='moving_bar',
@@ -198,14 +213,19 @@ incidentTimes=[]
 maxTrials=len(visualDelays-1)
 #region [rgba(206, 10, 118, 0.14)]
 # Start Routine "trial"
+print("\nmoving bar starts at ", moving_bar.pos[0])
 while trialN<maxTrials and not endExpNow:
     trialNum.append(trialN+1)
     _space2pass_allKeys = []
     space2pass.keys = []
     space2pass.clearEvents(eventType='keyboard')
-    print("incident loc  ", incident_locs[trialN])
+    print("incident loc is ", incident_locs[trialN])
     incident_loc=incident_locs[trialN] # loc in scale
-    incident_loc=[incident_loc*win.size[0]/16] # loc in pixels
+    incident_loc=incident_loc*win.size[0]/16# loc in pixels
+    incident_loc = incident_loc - win.size[0] / 2
+
+    print("incident loc in pixels is ", incident_loc)
+
 
     # have a rest screen
     if trialN%20==0 and trialN>0:
@@ -259,8 +279,9 @@ while trialN<maxTrials and not endExpNow:
     # Define the speed of the bar in pixels per second
     speed = -1*sideBar*dva_to_px(0.16)  # Adjust this value as needed. speed is in pixels per frame
     totalDur=abs(totalDistance/(speed*60))
-    print("total dur",totalDur)
-    print("speed is ", speed)
+    # print("total dur",totalDur)
+    # print("speed is ", speed)
+    
     clock = core.Clock()
     # Track the last frame time
     last_frame_time = clock.getTime()
@@ -287,7 +308,18 @@ while trialN<maxTrials and not endExpNow:
 
     initiate_incident=False
     # Calculate the incident frame based on the incident location
-    incidentFrame = int(abs(incident_loc - movingBarXPos0) / abs(speed))
+    incident_loc_conv=incident_loc+win.size[0]/2
+    incidentFrame = int(abs(incident_loc_conv - movingBarXPos0-win.size[0]/2) / abs(speed))
+
+    # #  alternatif using if direction
+    # if direction_bar==1:
+    #     incidentFrame=int(incident_loc_conv-movingBarXPos0)/speed
+    # else:
+    #     incidentFrame=int((win.size[0]-incident_loc_conv-movingBarXPos0)/speed)
+
+    print("incident frame is ", incidentFrame)
+    print("\nmoving bar starts at ", moving_bar.pos[0])
+    print("dire is ", direction_bar)
     incidentTime=incidentFrame/frameDur
     incidentTimes.append(incidentTime)
     """Run Trial Routine"""
@@ -314,22 +346,18 @@ while trialN<maxTrials and not endExpNow:
             new_pos_x = moving_bar.pos[0] + speed 
             moving_bar.pos = [new_pos_x, moving_bar.pos[1]]
 
-            # if frameN <= incidentFrame+visualDelays[trialN]:
-            #     flash_pos_x=flash.pos[0] + speed 
-            #     flash.pos = [new_pos_x, flash.pos[1]]
-            # elif frameN == incidentFrame:
-            #     bar_at_flash_X.append(moving_bar.pos[0])
-
-
 
         elif t>=totalDur-frameTolerance:#moving_bar.pos[0] >= field_size[0]/2-horizontalOffset:
             trial_durs.append(totalDur)
             continueRoutine=False
 
-        if flash.status == NOT_STARTED and frameN == incidentFrame+visualDelays[trialN]:
+        if flash.status == NOT_STARTED and frameN <= (incidentFrame):
             flash_pos_x=flash.pos[0] + speed 
             flash.pos = [flash_pos_x, flash.pos[1]]
-            if frameN == incident_loc:
+            if frameN == incidentFrame:
+                print("\nflash starts at frame ", incidentFrame)
+                print("\n flash pos is ", flash.pos[0])
+
                 bar_at_flash_X.append(moving_bar.pos[0])
                 flash.frameNStart=frameN
                 flash.tStart = t
@@ -340,7 +368,7 @@ while trialN<maxTrials and not endExpNow:
   
 
         # initiate audio cue and flash when moving bar is at the center of the screen
-        if burst.status == NOT_STARTED and frameN == incidentFrame+audioDelays[trialN]:
+        if burst.status == NOT_STARTED and frameN >= incidentFrame+audioDelays[trialN]:
             #speaker_controller.turn_on_speaker(trialN)
             burst.play()  # sync with win flip
             burst.tStart = t
