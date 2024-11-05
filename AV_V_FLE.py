@@ -53,8 +53,8 @@ initialBarSide = timing_generator.initial_bar_side()
 # Set the audio library to pyo
 prefs.hardware['audioLib'] = 'PTB'
 prefs.hardware['audioLatencyMode'] = '4' 
-  
- 
+
+
 
 """          Experiment INFO Setup"""
 # Store info about the experiment se ssion
@@ -121,7 +121,7 @@ print("refresh rate is", refreshRate)
 frameDur=1/refreshRate
 print("frame dur is", frameDur)
 
-
+    
 # Initialize components for Routine "trial"
 trialClock = core.Clock()
 

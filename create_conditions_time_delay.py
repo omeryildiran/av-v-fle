@@ -45,7 +45,7 @@ class TimingGenerator:
         audioDelay, visualDelay = self.generate_audio_visual_delays()
         trial_num = len(audioDelay)
         # divide screen to 16 parts and randomly select one part for each trial dont take the edges
-        incident_positions = np.random.uniform(3, 13, trial_num)
+        incident_positions = np.random.randint(4, 14, trial_num) # full scale random.randint(1, 17, trial_num)
         return incident_positions
     
 # # Create an instance of the TimingGenerator class
@@ -73,3 +73,4 @@ print(len(set(zip(audioDelay, visualDelay))))
 # plt.title('Audio vs Visual Delays')
 # plt.show()
 
+#print(incident_positions[:50])

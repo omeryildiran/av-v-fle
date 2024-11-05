@@ -44,20 +44,22 @@ import pandas as pd
 import serial
 from ardunio_sound_opener import speaker_controller
 
-speaker_controller = speaker_controller()
-speaker_controller.test_all_speakers()
+#speaker_controller = speaker_controller()
+# speaker_controller.test_all_speakers()
 
 
 timing_generator = TimingGenerator( trial_per_condition=8)
 audioDelays, visualDelays = timing_generator.generate_audio_visual_delays()
+incidentPoints = timing_generator.generate_incident_times()
 initialBarSide = timing_generator.initial_bar_side()
-incident_locs = timing_generator.generate_incident_positions()
+incident_positions = timing_generator.generate_incident_positions()
 
 
 # Set the audio library to pyo
 prefs.hardware['audioLib'] = 'PTB'
 prefs.hardware['audioLatencyMode'] = '4' 
-
+  
+ 
 
 """          Experiment INFO Setup"""
 # Store info about the experiment se ssion
@@ -95,31 +97,15 @@ screen_distance=monitorSpecs["screen_distance"] #60 # 57 asus
 myMon=monitors.Monitor('asusMon', width=screen_width, distance=57)
 #myMon.setSizePix((sizeIs, sizeIs))
 selectedMon=myMon
-
-on_mac=False
-
 win = visual.Window(size=(sizeIs,sizeIs),
-                    fullscr=False,  monitor=myMon, units='pix',  color="black", useFBO=True, screen=1, colorSpace='rgb')
+                    fullscr=True,  monitor=myMon, units='pix',  color="black", useFBO=True, screen=1, colorSpace='rgb')
 exp = data.ExperimentHandler(name="av_v_fle",version='0.1.0')
 
-print("screen size is ", win.size)
-#print(" frame rate is ", win.getActualFrameRate())
-#print("Full screen is ", win.fullscr)
-
-if win.getActualFrameRate()==None:
-    if on_mac:
-        refreshRate=120
-    else:
-        refreshRate=60
-else:
-    refreshRate=win.getActualFrameRate()
-
-print("refresh rate is", refreshRate)
 
 win.monitor.setWidth(screen_width)
 win.monitor.setDistance(screen_distance)
 
-# refreshRate=win.getActualFrameRate()
+refreshRate=win.getActualFrameRate()
 expInfo['frameRate']=refreshRate
 if expInfo['frameRate']!= None:
     frameDur = 1.0 / round(expInfo['frameRate'])
@@ -130,6 +116,7 @@ else:
 def dva2height(dva):
     return dva_to_px(dva, h=screen_height, d=screen_distance, r=sizeIs)/win.size[1]
 print(refreshRate)
+print("refresh rate is", refreshRate)
 frameDur=1/refreshRate
 print("frame dur is", frameDur)
 
@@ -142,13 +129,12 @@ barWidth=dva_to_px(size_in_deg=0.2,h=screen_height,d=screen_distance,r=sizeIs)
 barHeight=dva_to_px(size_in_deg=0.7,h=screen_height,d=screen_distance,r=sizeIs)
 #barWidth=100
 
-horizontalOffset=dva_to_px(1,h=screen_height,d=screen_distance,r=sizeIs)
+horizontalOffset=dva_to_px(3,h=screen_height,d=screen_distance,r=sizeIs)
 movingBarYPos=-dva_to_px(0.5,screen_height,screen_distance,sizeIs)
 
-bar_pos_relative=win.size[0]/2 # 1 for square screen and 0 for horizontal screen
 moving_bar = visual.Rect(win=win, name='moving_bar',
     width=barWidth, height=barHeight,
-    ori=0, pos=(-bar_pos_relative, movingBarYPos),
+    ori=0, pos=(-win.size[1]/2, movingBarYPos),
     lineWidth=0, lineColor=barColor, lineColorSpace='rgb',
     fillColor=barColor, fillColorSpace='rgb',
     opacity=1, depth=-1.0, interpolate=True,units='pix')
@@ -196,7 +182,7 @@ phaseTimer = core.Clock()  # to track time remaining of each (possibly non-sl€
 responseKeys = keyboard.Keyboard(backend='iohub')
 all_responses=[]
 responseTimes=[]
-totalDistance=bar_pos_relative*2-horizontalOffset*2
+totalDistance=win.size[1]-horizontalOffset*2
 
 ## Save the data
 incident_imes=[]
@@ -205,128 +191,70 @@ visual_delays=[]
 trial_durs=[]
 audioTime=[]
 flashTime=[]
-incident_locs_obs=[]
+incidentTimes=[]
 trialNum=[]
 flashPostionX=[]
 bar_at_flash_X=[]
 directions=[]
-incidentTimes=[]
 maxTrials=len(visualDelays-1)
 #region [rgba(206, 10, 118, 0.14)]
 # Start Routine "trial"
-while trialN<maxTrials and not endExpNow:
-    trialNum.append(trialN+1)
-    _space2pass_allKeys = []
-    space2pass.keys = []
-    space2pass.clearEvents(eventType='keyboard')
-    #print("incident loc is ", incident_locs[trialN]-1)
-    incident_loc_ordinal=incident_locs[trialN] # loc in ordinal 1 to 16 but rescaled to 4 to 13 (randint(4, 14, trial_num))
-    incident_loc=(incident_loc_ordinal-1)*win.size[0]/16# loc in pixels
-    incident_loc = incident_loc - win.size[0] / 2 # loc to center is 0 and to the right is positive and to the left is negative
+while trialN < maxTrials and not endExpNow:
+    trialNum.append(trialN + 1)
+    sideBar = initialBarSide[trialN]  # 1 for right, -1 for left
+    directions.append(-1 * sideBar)
+    movingBarXPos0 = sideBar * (win.size[1] / 2 - horizontalOffset)  # Initial position based on the trial setup
 
-    # print("incident loc pixels: ", incident_loc)
+    moving_bar.pos = [movingBarXPos0, movingBarYPos]
+    flash.pos[1] = dva_to_px(0.5, h=screen_height, d=screen_distance, r=sizeIs)  # Y position for the flash
 
+    # Define the speed and total duration of the bar's movement across the screen
+    speed = -1 * sideBar * dva_to_px(0.16, h=screen_height, d=screen_distance, r=sizeIs)
+    totalDur = abs(totalDistance / (speed * 60))
 
-    # have a rest screen
-    if trialN%20==0 and trialN>0:
-        haveRestText.text=f'End of {haveRestNum} trials. Press space to continue'
-        haveRestNum+=1
-        haveRest=True
-    while haveRest:
-        haveRestText.draw()
-        win.flip()
-        theseKeys = space2pass.getKeys(keyList=['space'])
-        _space2pass_allKeys.extend(theseKeys)
-        if len(_space2pass_allKeys)>0:
-            haveRest=False
-
-
-    win.flip(clearBuffer=True)
-    continueRoutine = True
-    _timeToFirstFrame = win.getFutureFlipTime(clock="now")
-    frameN = -1
-    
-    tStart = globalClock.getTime()
-    # # wait for 0.3 second before starting the trial
-    waiterTime=0
-    while  waiterTime <0.3:
-        waiterTime = globalClock.getTime() - tStart
-        #fixation.draw()
-        win.flip()
-
-    # keep track of which components have finished
-    trialComponents = [fixation, moving_bar, burst, flash]
-    for thisComponent in trialComponents:
-        thisComponent.tStart = None
-        thisComponent.tStop = None
-        thisComponent.tStartRefresh = None
-        thisComponent.tStopRefresh = None
-        if hasattr(thisComponent, 'status'):
-            thisComponent.status = NOT_STARTED
-
-
-    # Set the initial position of the moving bar dependent on the trial
-    sideBar=initialBarSide[trialN]# 1 for right, -1 for left
-    direction_bar=-1*sideBar # 1 for to the right, -1 for to the left
-    directions.append(direction_bar)
-    movingBarXPos0=sideBar*(bar_pos_relative-horizontalOffset)# if sideBar is -1, moving bar starts from the left edge of the screen vice-versa
-    moving_bar.pos = [movingBarXPos0,movingBarYPos]
-    flash.pos[0] = movingBarXPos0
-    flash.pos[1]=dva_to_px(0.5,h=screen_height,d=screen_distance,r=sizeIs)
-
-    # Define the speed of the bar in pixels per second
-    speed = -1*sideBar*dva_to_px(0.16)  # Adjust this value as needed. speed is in pixels per frame
-    totalDur=abs(totalDistance/(speed*60))
-    # print("total dur",totalDur)
-    # print("speed is ", speed)
-    
     clock = core.Clock()
-    # Track the last frame time
     last_frame_time = clock.getTime()
-    fixation.color='white'
-    inicdentON=False
-
-    # print("incident happens at frame ", incidentFrame)
+    fixation.color = 'white'
+    inicdentON = False
     trialStart = globalClock.getTime()
     trialClock.reset()
-    # print("audio delays", audioDelays[trialN])
-    # print("visual delays", visualDelays[trialN])
-    # print("incident time", incidentTime)
-    
 
-    if visualDelays[trialN]<0:
-        flash.pos[0] =flash.pos[0] + -1*visualDelays[trialN]*speed
-    elif visualDelays[trialN]>0:
-        flash.pos[0] =flash.pos[0] + -1*visualDelays[trialN]*speed
-    
+    # Check the position every frame to decide when to trigger the flash and sound
+    while continueRoutine:
+        t = trialClock.getTime()
+        frameN += 1
+
+        # Move the bar every frame
+        new_pos_x = moving_bar.pos[0] + speed
+        moving_bar.pos = [new_pos_x, movingBarYPos]
+
+        # Check if the bar has reached the incident position for this trial
+        if abs(moving_bar.pos[0] - incident_positions[trialN]) <= abs(speed):
+            # Trigger the flash
+            flash.pos[0] = moving_bar.pos[0]
+            flash.draw()
+
+            # Trigger the sound
+            burst.play()
+
+            # Optionally, mark the frame and time when the incident was triggered
+            bar_at_flash_X.append(moving_bar.pos[0])
+            flashTime.append(trialClock.getTime())
+
+        # End the trial when the bar reaches the opposite end
+        if abs(moving_bar.pos[0]) >= (win.size[1] / 2 - horizontalOffset):
+            continueRoutine = False
+
+        win.flip()
 
     # burst.setSound('A', secs=0.016)
-    burst.setVolume(np.random.uniform(0.4,0.7))
+    # burst.setVolume(1)
 
-    initiate_incident=False
-    # Calculate the incident frame based on the incident locations
-    print(" direction bar is ", direction_bar)
-    incident_locs_obs.append(incident_loc)
-    incident_loc_conv=incident_loc+win.size[0]/2
-    incidentFrame = int(abs(incident_loc_conv - movingBarXPos0-win.size[0]/2) / abs(speed))
-    print("incident loc is ", incident_loc)
-    print("incident loc conv is ", incident_loc_conv)
-    print("incident loc ordinal is ", incident_loc_ordinal)
-    # #  alternatif using if direction
-    # if direction_bar==1:
-    #     incidentFrame=int(incident_loc_conv-movingBarXPos0)/speed
-    # else:
-    #     incidentFrame=int((win.size[0]-incident_loc_conv-movingBarXPos0)/speed)
-
-
-    print("audio delay is ", audioDelays[trialN])
-    print("visual delay is ", visualDelays[trialN])
-    incidentTime=incidentFrame/frameDur
-    incidentTimes.append(incidentTime)
     """Run Trial Routine"""
     #region [rgba(10, 183, 206, 0.14)]
     while continueRoutine:
-        t = trialClock.getTime()   # get current time
+
+        t = trialClock.getTime()
 
         tThisFlip = win.getFutureFlipTime(clock=phaseTimer)
         frameN = frameN + 1
@@ -347,6 +275,13 @@ while trialN<maxTrials and not endExpNow:
             new_pos_x = moving_bar.pos[0] + speed 
             moving_bar.pos = [new_pos_x, moving_bar.pos[1]]
 
+            # if frameN <= incidentFrame+visualDelays[trialN]:
+            #     flash_pos_x=flash.pos[0] + speed 
+            #     flash.pos = [new_pos_x, flash.pos[1]]
+            # elif frameN == incidentFrame:
+            #     bar_at_flash_X.append(moving_bar.pos[0])
+
+
 
         elif t>=totalDur-frameTolerance:#moving_bar.pos[0] >= field_size[0]/2-horizontalOffset:
             trial_durs.append(totalDur)
@@ -356,7 +291,6 @@ while trialN<maxTrials and not endExpNow:
             flash_pos_x=flash.pos[0] + speed 
             flash.pos = [flash_pos_x, flash.pos[1]]
             if frameN == incidentFrame:
-   
                 bar_at_flash_X.append(moving_bar.pos[0])
                 flash.frameNStart=frameN
                 flash.tStart = t
@@ -364,12 +298,13 @@ while trialN<maxTrials and not endExpNow:
                 flash.draw()
                 flashTime.append(flash.tStart)
                 flashPostionX.append(flash.pos[0])
-  
 
         # initiate audio cue and flash when moving bar is at the center of the screen
-        if burst.status == NOT_STARTED and frameN >= incidentFrame+audioDelays[trialN]:
-            speaker_controller.turn_on_speaker(incident_loc_ordinal)
+        if burst.status == NOT_STARTED and frameN == incidentFrame+audioDelays[trialN]:
+            print("audio start time ", trialClock.getTime())
+            #speaker_controller.turn_on_speaker(trialN)
             burst.play()  # sync with win flip
+            print("audio end time ", trialClock.getTime())
             burst.tStart = t
             win.timeOnFlip(burst, 'tStartRefresh')
             burst.status = STARTED
@@ -388,7 +323,7 @@ while trialN<maxTrials and not endExpNow:
             trialN-=1
             break
     #endregion
-    speaker_controller.turn_off_speaker(incident_loc_ordinal)
+    speaker_controller.turn_off_speaker(trialN)
 
     # ending routine "trial"
     for thisComponent in trialComponents:
